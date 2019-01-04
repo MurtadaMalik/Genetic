@@ -1,50 +1,48 @@
 import java.lang.Math;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 
 
 public class Genetic {
 
   public static void main(String[] args){
-    Organism.run(500,"+",5);
+    Organism.run(500,10,2,"-"); // ( Generations , Population Size / 2 , Mutation Rate , Optimization Target )
   }
 }
 
 class Organism {
-  int x1;
-  int x2;
-  int val;
+  double x1;
+  double x2;
+  double val;
 
   public Organism(){
-    x1 = (int)(Math.random()*256);
-    x2 = (int)(Math.random()*256);
-    val = fun();
+    x1 = Math.random()*500;
+    x2 = Math.random()*500;
+    val = fitness();
   }
 
-  public Organism(int a, int b){
+  public Organism(double a, double b){
     x1 = a;
     x2 = b;
-    val = fun();
+    val = fitness();
   }
 
   //function to be tested
-  public int fun(){
-    return (int) (-x1*x1-x2*x2+10*x1-2*x2-21);
-  }
-
-  public int getX1(){
-    return x1;
-  }
-  public int getX2(){
-    return x2;
-  }
-  public int fitness(){
-    val = fun();
+  public double fitness(){
+    val = (x1 + 2*x2 - 7)*(x1 + 2*x2 - 7) + (2*x1 + x2 - 5)*(2*x1 + x2 - 5);
     return val;
   }
 
+  public double getX1(){
+    return x1;
+  }
+  public double getX2(){
+    return x2;
+  }
+
   public static Organism combine(Organism a, Organism b){
-    int n1 , n2;
+    double n1 , n2;
 
     int r = (int) (Math.random()*2);
     if(r==0){n1 = a.getX1();}
@@ -57,52 +55,72 @@ class Organism {
     return new Organism(n1,n2);
   }
 
-  public void mutate(int maxmut){
-    int intercept = (int)(Math.random()*2*maxmut)-maxmut;
+  public void mutate(double maxmut){
+    double intercept = (Math.random()*2*maxmut)-maxmut;
     x1 += intercept;
 
-    intercept = (int) (Math.random()*2*maxmut)-maxmut;
+    intercept = (Math.random()*2*maxmut)-maxmut;
     x2 += intercept;
   }
 
-  public static void run(int generations, String target, int mutvar){
+  public void genes(){
+    System.out.println( x1 );
+    System.out.println( x2 );
+  }
+
+  public void genotype(){
+    System.out.println( "(" + String.format("%.4f" , x1) + ").(" + String.format("%.4f" , x2) + ") res=" + String.format("%.4f" , fitness()) );
+  }
+
+
+  public static void run(int generations, int popNum, double mutVar, String target){ //mutation in range [-mutvar,+mutvar]
+
     //define arraylist
     ArrayList<Organism> population = new ArrayList<Organism>();
 
     //starting point, random Organisms
-    Organism[] pop = new Organism[20];
-    for(Organism it:pop){
-      it = new Organism();
-      population.add(it);
+    Organism ancestor;
+    for(int i =0; i < 2*popNum ; i++){
+      ancestor = new Organism();
+      population.add(ancestor);
     }
 
-    double mean=0;
     for(int gen=0; gen<generations; gen++){
 
       //evaluation
+      double mean=0;
       for(Organism it : population){
         mean += it.fitness();
       }
-      mean = mean / 20.0;
+      mean = mean / (2.0*popNum);
       System.out.println("Generation" + gen + " evaluation: " + mean);
 
-      //reproduction
-      Organism[] children = new Organism[10];
-      for(int i = 0; i < 10; i++){
-        children[i] = Organism.combine(population.get(2*i), population.get(2*i+1));
-        children[i].mutate(mutvar);
-      }
+      //shuffle the population - random reproduction
+      //Collections.shuffle(population);
 
-      //add children into population
-      for(Organism it : children){
-        population.add(it);
+      //reproduction
+      Organism child;
+      for(int i = 0; i < popNum; i++){
+        child = Organism.combine(population.get(2*i), population.get(2*i+1));
+        child.mutate(mutVar);
+        population.add(child);
       }
 
       //sort population
-      bubble(target,population);
+      Collections.sort(population, new Comparator<Organism>() {
+          @Override
+          public int compare(Organism o1, Organism o2)
+          {
+            if(target=="-")
+              return Double.compare(o2.fitness() , o1.fitness());
+            else
+              return Double.compare(o1.fitness() , o2.fitness());
+          }
+      }
+      );
 
       //remove weak Organisms
-      for(int i = 0; i < 10; i++){
+      for(int i = 0; i < popNum; i++){
         population.remove(0);
       }
 
@@ -111,68 +129,6 @@ class Organism {
       }
       System.out.println();
     }
-  }
-
-  public void genes(){
-    System.out.println( String.format("%8s", Integer.toBinaryString(x1 & 0xFF)).replace(' ' , '0') );
-    System.out.println( String.format("%8s", Integer.toBinaryString(x2 & 0xFF)).replace(' ' , '0') );
-  }
-
-  public void genotype(){
-    System.out.println( String.format("%8s", Integer.toBinaryString(x1 & 0xFF)).replace(' ' , '0') + "." + String.format("%8s", Integer.toBinaryString(x2 & 0xFF)).replace(' ' , '0') + " " + fitness() );
-  }
-
-  public static void bubble(String s , ArrayList<Organism> population){
-    Organism temp;
-    boolean swapped;
-
-    //ascending order
-    if(s=="+"){
-
-      for (int i = 0; i < population.size() - 1; i++)
-      {
-          swapped = false;
-          for (int j = 0; j < population.size() - i - 1; j++)
-          {
-            if (population.get(j).fitness() > population.get(j+1).fitness())
-            {
-                // swap Organism[j] and Organism[j+1]
-                temp = population.get(j);
-                population.set(j,population.get(j+1));
-                population.set(j+1,temp);
-                swapped = true;
-            }
-          }
-          if (swapped == false)
-              break;
-      }
-
-    }
-    //descending order
-    else if(s=="-"){
-
-      for (int i = 0; i < population.size() - 1; i++)
-      {
-          swapped = false;
-          for (int j = 0; j < population.size() - i - 1; j++)
-          {
-            if (population.get(j).fitness() < population.get(j+1).fitness())
-            {
-                // swap Organism[j] and Organism[j+1]
-                temp = population.get(j);
-                population.set(j,population.get(j+1));
-                population.set(j+1,temp);
-                swapped = true;
-            }
-          }
-          if (swapped == false)
-              break;
-      } //end of for loop
-
-    }
-    else{
-      System.out.println("Target not applicable");
-    }
-  } //end of bubble
+  } //end of run
 
 }
