@@ -3,18 +3,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 
-
 public class Genetic {
 
   public static void main(String[] args){
-    Organism.run(500,10,2,"-"); // ( Generations , Population Size / 2 , Mutation Rate , Optimization Target )
+    Organism.run(200,15,2,"<"); // ( Generations , Population Size / 2 , Mutation Rate , Optimization Target )
   }
+
 }
 
 class Organism {
   double x1;
   double x2;
   double val;
+  static double goal;
 
   public Organism(){
     x1 = Math.random()*500;
@@ -28,10 +29,14 @@ class Organism {
     val = fitness();
   }
 
+
   //function to be tested
+  public double fun(){
+    return (x1 + 2*x2 - 7)*(x1 + 2*x2 - 7) + (2*x1 + x2 - 5)*(2*x1 + x2 - 5);
+  }
+
   public double fitness(){
-    val = (x1 + 2*x2 - 7)*(x1 + 2*x2 - 7) + (2*x1 + x2 - 5)*(2*x1 + x2 - 5);
-    return val;
+    return val = fun();
   }
 
   public double getX1(){
@@ -63,13 +68,21 @@ class Organism {
     x2 += intercept;
   }
 
+  public static boolean isNumber(String s){
+    try {
+      double d = Double.parseDouble(s);
+    } catch(NumberFormatException nfe) {  return false;  }
+
+    return true;
+  }
+
   public void genes(){
     System.out.println( x1 );
     System.out.println( x2 );
   }
 
   public void genotype(){
-    System.out.println( "(" + String.format("%.4f" , x1) + ").(" + String.format("%.4f" , x2) + ") res=" + String.format("%.4f" , fitness()) );
+    System.out.println( "(" + String.format("%.4f" , x1) + ").(" + String.format("%.4f" , x2) + ") fit=" + String.format("%.4f" , fitness()) );
   }
 
 
@@ -106,18 +119,30 @@ class Organism {
         population.add(child);
       }
 
-      //sort population
-      Collections.sort(population, new Comparator<Organism>() {
-          @Override
-          public int compare(Organism o1, Organism o2)
-          {
-            if(target=="-")
-              return Double.compare(o2.fitness() , o1.fitness());
-            else
-              return Double.compare(o1.fitness() , o2.fitness());
-          }
+      if(isNumber(target)){
+        goal = Double.parseDouble(target);
+        Collections.sort(population, new Comparator<Organism>() {
+            @Override
+            public int compare(Organism o1, Organism o2)
+            {
+                return Double.compare( Math.abs(o2.fitness()-goal) , Math.abs(o1.fitness()-goal) );            }
+        }
+        );
       }
-      );
+      else{
+        //sort population
+        Collections.sort(population, new Comparator<Organism>() {
+            @Override
+            public int compare(Organism o1, Organism o2)
+            {
+              if(target=="<")
+                return Double.compare(o2.fitness() , o1.fitness());
+              else
+                return Double.compare(o1.fitness() , o2.fitness());
+            }
+        }
+        );
+      }
 
       //remove weak Organisms
       for(int i = 0; i < popNum; i++){
